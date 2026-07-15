@@ -1,0 +1,95 @@
+@baseUrl = http://localhost:5157
+
+### 1) Comprobar que la API está arrancada
+GET {{baseUrl}}/health
+
+
+### 2) Login con usuario normal de demo
+# @name loginUser
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "username": "usuario",
+  "password": "User1234!"
+}
+
+
+### 3) Login con administrador de demo
+# @name loginAdmin
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "username": "admin",
+  "password": "Admin123!"
+}
+
+
+### Variables obtenidas de las respuestas anteriores
+@userToken = {{loginUser.response.body.$.token}}
+@adminToken = {{loginAdmin.response.body.$.token}}
+
+
+### 4) Intentar entrar al panel admin con usuario normal: debe devolver 403
+GET {{baseUrl}}/api/admin/dashboard
+Authorization: Bearer {{userToken}}
+
+
+### 5) Entrar al panel admin con administrador: debe devolver 200
+GET {{baseUrl}}/api/admin/dashboard
+Authorization: Bearer {{adminToken}}
+
+
+### 6) Listar usuarios como administrador: debe devolver 200
+GET {{baseUrl}}/api/users
+Authorization: Bearer {{adminToken}}
+
+
+### 7) Registrar usuario válido: debe devolver 201
+POST {{baseUrl}}/api/users/register
+Content-Type: application/json
+
+{
+  "username": "nuevo_usuario",
+  "email": "nuevo.usuario@test.com",
+  "password": "Nuevo123!"
+}
+
+
+### 8) Buscar usuario válido: debe devolver 200 si existe
+GET {{baseUrl}}/api/users/search?username=admin
+
+
+### 9) Prueba SQL Injection en username: debe devolver 400
+GET {{baseUrl}}/api/users/search?username=admin'%20OR%20'1'%3D'1
+
+
+### 10) Prueba XSS en registro: debe devolver 400
+POST {{baseUrl}}/api/users/register
+Content-Type: application/json
+
+{
+  "username": "<script>alert('XSS')</script>",
+  "email": "xss@test.com",
+  "password": "Password123!"
+}
+
+
+### 11) Prueba de salida segura contra XSS: debe devolver safeHtml codificado
+POST {{baseUrl}}/api/security/echo-safe
+Content-Type: application/json
+
+{
+  "text": "<script>alert('XSS')</script>"
+}
+
+
+### 12) Login incorrecto: debe devolver 401
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "username": "admin",
+  "password": "password_mal"
+}
